@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigationType } from "react-router-dom";
 
@@ -31,6 +32,8 @@ export function StudyProvider({ children }) {
   const [enabled, setEnabled] = useState(() => loadJson(ENABLED_KEY, false));
   const [events, setEvents] = useState(() => loadJson(EVENTS_KEY, []));
   const visitRef = useRef({ step: routeSteps[location.pathname], startedAt: Date.now() });
+  const enabledRef = useRef(enabled);
+  const firstRouteEffect = useRef(true);
 
   useEffect(() => localStorage.setItem(ENABLED_KEY, JSON.stringify(enabled)), [enabled]);
   useEffect(() => localStorage.setItem(EVENTS_KEY, JSON.stringify(events)), [events]);
@@ -49,7 +52,22 @@ export function StudyProvider({ children }) {
   useEffect(() => {
     const nextStep = routeSteps[location.pathname];
     const previous = visitRef.current;
-    if (enabled && previous.step) {
+    const wasEnabled = enabledRef.current;
+    enabledRef.current = enabled;
+    if (!enabled) {
+      visitRef.current = { step: nextStep, startedAt: Date.now() };
+      firstRouteEffect.current = false;
+      return;
+    }
+    if (firstRouteEffect.current || !wasEnabled) {
+      visitRef.current = { step: nextStep, startedAt: Date.now() };
+      firstRouteEffect.current = false;
+      if (nextStep) setEvents((current) => [...current, {
+        id: `${Date.now()}-entered`, type: "page_entered", step: nextStep, at: new Date().toISOString(),
+      }]);
+      return;
+    }
+    if (previous.step) {
       const duration = Math.max(1, Math.round((Date.now() - previous.startedAt) / 1000));
       setEvents((current) => [...current, {
         id: `${Date.now()}-duration`, type: "page_duration", step: previous.step,
@@ -57,7 +75,7 @@ export function StudyProvider({ children }) {
       }]);
     }
     visitRef.current = { step: nextStep, startedAt: Date.now() };
-    if (enabled && nextStep) {
+    if (nextStep) {
       setEvents((current) => [...current, {
         id: `${Date.now()}-entered`, type: "page_entered", step: nextStep,
         at: new Date().toISOString(),
@@ -75,6 +93,16 @@ export function StudyProvider({ children }) {
   function clearStudy() {
     setEvents([]);
     localStorage.removeItem(EVENTS_KEY);
+  }
+
+  function checkpoint() {
+    if (!enabled || !visitRef.current.step) return;
+    const duration = Math.max(1, Math.round((Date.now() - visitRef.current.startedAt) / 1000));
+    const step = visitRef.current.step;
+    visitRef.current = { step, startedAt: Date.now() };
+    setEvents((current) => [...current, {
+      id: `${Date.now()}-checkpoint`, type: "page_duration", step, duration, at: new Date().toISOString(),
+    }]);
   }
 
   const summary = useMemo(() => {
@@ -98,7 +126,7 @@ export function StudyProvider({ children }) {
     });
   }, [events]);
 
-  const value = useMemo(() => ({ enabled, events, summary, toggle, record, clearStudy }), [enabled, events, summary]);
+  const value = useMemo(() => ({ enabled, events, summary, toggle, record, checkpoint, clearStudy }), [enabled, events, summary]);
   return <StudyContext.Provider value={value}>{children}</StudyContext.Provider>;
 }
 
