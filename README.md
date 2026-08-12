@@ -26,6 +26,12 @@ npm run dev
 
 Open <http://localhost:5173>.
 
+## Live site
+
+GitHub Pages deploys the `main` branch automatically through `.github/workflows/deploy-pages.yml`:
+
+<https://huyuanqi.github.io/trust-delegated-flow/>
+
 ## Base44 setup
 
 The public app ID is already present in `.env.example`. Keep `VITE_DEMO_MODE=true` until the Entity schemas have been pushed and their security rules have been reviewed.
