@@ -1,0 +1,20 @@
+{
+  "name": "MemoryRecord",
+  "type": "object",
+  "title": "Memory Record",
+  "properties": {
+    "memory_type": { "type": "string", "enum": ["user_preference", "delegation_pattern", "trust_memory"] },
+    "title": { "type": "string", "minLength": 1, "maxLength": 300 },
+    "content": { "type": "string", "maxLength": 4000 },
+    "enabled": { "type": "boolean", "default": true },
+    "source_session_id": { "type": "string" },
+    "last_used": { "type": "string", "format": "date-time" }
+  },
+  "required": ["memory_type", "title", "content"],
+  "rls": {
+    "create": true,
+    "read": { "created_by": "{{user.email}}" },
+    "update": { "created_by": "{{user.email}}" },
+    "delete": { "created_by": "{{user.email}}" }
+  }
+}

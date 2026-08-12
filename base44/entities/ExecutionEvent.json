@@ -1,0 +1,20 @@
+{
+  "name": "ExecutionEvent",
+  "type": "object",
+  "title": "Execution Event",
+  "properties": {
+    "session_id": { "type": "string" },
+    "task_id": { "type": "string" },
+    "event_type": { "type": "string", "enum": ["created", "analysis_completed", "assignment_changed", "approval_requested", "approved", "started", "completed", "modified", "stopped", "undone"] },
+    "detail": { "type": "string", "maxLength": 4000 },
+    "metadata": { "type": "object" }
+  },
+  "required": ["session_id", "event_type"],
+  "rls": {
+    "create": true,
+    "read": { "created_by": "{{user.email}}" },
+    "update": { "created_by": "{{user.email}}" },
+    "delete": { "created_by": "{{user.email}}" }
+  }
+}
+

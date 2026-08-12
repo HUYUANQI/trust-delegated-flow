@@ -1,0 +1,13 @@
+{
+  "name": "trust-delegated-flow",
+  "description": "Human-AI delegation experiment and trust control system",
+  "entitiesDir": "./entities",
+  "functionsDir": "./functions",
+  "agentsDir": "./agents",
+  "connectorsDir": "./connectors",
+  "authDir": "./auth",
+  "site": {
+    "outputDirectory": "../dist"
+  }
+}
+
