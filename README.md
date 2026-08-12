@@ -15,6 +15,17 @@ This repository turns the static demonstration flow into a shared session model 
 - Base44 repository helpers for sessions, tasks, execution events, trust events, and memory
 - Base44 Entity JSON schemas
 - Clear separation between demo fixtures and real session data
+- Explainable task-level AI / shared / human assignment controls
+- A real approval boundary that pauses before high-impact external action
+- Multi-stage agent execution with approval, editing, intervention, and recovery
+- Evidence-first trust review and event-driven reflection
+- Optional local-only Study Mode with an observer summary and interaction-friction indicators
+
+## HCD study scenario
+
+Choose **“Analyze five user interviews and prepare a summary for the product team.”** in the Delegation Workspace. The final stakeholder-send task is intentionally high impact and triggers the decision boundary during execution.
+
+Study Mode is off by default. When enabled from the sidebar, observation events and dwell times are stored only in the browser's `localStorage`; no analytics are transmitted.
 
 ## Run locally
 

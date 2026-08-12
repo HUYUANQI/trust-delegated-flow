@@ -1,5 +1,9 @@
-import { Activity, Brain, Gauge, Grid2X2, LayoutDashboard, MemoryStick, Settings, ShieldCheck, Zap } from "lucide-react";
+import { Activity, Brain, Eye, Gauge, Grid2X2, LayoutDashboard, MemoryStick, Settings, ShieldCheck, Zap } from "lucide-react";
+import { useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
+import { useStudy } from "../context/StudyContext";
+import DelegateCompanion from "./DelegateCompanion";
+import StudyObserverPanel from "./StudyObserverPanel";
 
 const navigation = [
   { label: "Dashboard", to: "/", icon: LayoutDashboard },
@@ -13,6 +17,8 @@ const navigation = [
 ];
 
 export default function AppShell() {
+  const { enabled, toggle } = useStudy();
+  const [observerOpen, setObserverOpen] = useState(false);
   return (
     <div className="app-shell">
       <aside className="sidebar">
@@ -24,13 +30,18 @@ export default function AppShell() {
             </NavLink>
           ))}
         </nav>
+        <div className="study-controls">
+          <div><button className="study-label" onClick={toggle}><Eye size={15} /> Study Mode</button><button className={enabled ? "toggle on" : "toggle"} onClick={toggle} aria-label="Toggle Study Mode"><span /></button></div>
+          {enabled && <button className="observer-button" onClick={() => setObserverOpen(true)}>Observer Summary</button>}
+        </div>
         <div className="profile">
           <span className="avatar">AM</span>
           <span><strong>Alex Morgan</strong><small>Product Designer</small></span>
         </div>
       </aside>
       <main className="main-content"><Outlet /></main>
+      <DelegateCompanion />
+      <StudyObserverPanel open={observerOpen} onClose={() => setObserverOpen(false)} />
     </div>
   );
 }
-

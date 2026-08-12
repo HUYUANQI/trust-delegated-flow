@@ -1,4 +1,7 @@
+import { researchScenarioGoal, researchScenarioTasks } from "./studyFixtures";
+
 export const sampleGoals = [
+  researchScenarioGoal,
   "Prepare next sprint planning",
   "Analyze user interview results",
   "Create a PRD for a new feature",
@@ -52,18 +55,11 @@ export function buildDemoAnalysis(goal) {
       "Record decisions for later review",
     ],
     overall_risk: "medium",
-    ai_confidence: 0.87,
+    ai_confidence: 0.84,
     recoverability: "high",
     difficulty_score: 2.4,
-    delegation_strategy: "AI-led with human approval at key decision points",
-    tasks: [
-      { order: 1, title: "Understand the goal", description: "Clarify the desired outcome and constraints", risk: "low", recoverability: "high", executor: "ai", permission: "not_required", status: "pending", depends_on: [] },
-      { order: 2, title: "Collect relevant information", description: "Gather the inputs needed to complete the goal", risk: "low", recoverability: "high", executor: "ai", permission: "not_required", status: "pending", depends_on: [1] },
-      { order: 3, title: "Develop a proposed solution", description: "Create a draft plan or deliverable", risk: "medium", recoverability: "high", executor: "shared", permission: "ask_first", status: "pending", depends_on: [2] },
-      { order: 4, title: "Review critical decisions", description: "Human reviews choices with meaningful impact", risk: "high", recoverability: "medium", executor: "human", permission: "required", status: "pending", depends_on: [3] },
-      { order: 5, title: "Finalize the result", description: "Apply approved changes and prepare the outcome", risk: "medium", recoverability: "high", executor: "shared", permission: "ask_first", status: "pending", depends_on: [4] },
-    ],
-    scores: { complexity: 3, clarity: 2, risk: 2, recoverability: 2, domain: 2, impact: 3, data: 3, judgment: 3 },
+    delegation_strategy: "AI-led analysis with shared interpretation and explicit approval before external action",
+    tasks: researchScenarioTasks.map((task) => ({ ...task })),
+    scores: { complexity: 3, clarity: 2, risk: 3, recoverability: 2, domain: 3, impact: 3, data: 3, judgment: 4 },
   };
 }
-

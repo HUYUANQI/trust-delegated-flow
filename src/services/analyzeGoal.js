@@ -30,6 +30,14 @@ const responseJsonSchema = {
           recoverability: { type: "string", enum: ["low", "medium", "high"] },
           executor: { type: "string", enum: ["ai", "shared", "human"] },
           permission: { type: "string", enum: ["not_required", "ask_first", "required"] },
+          recommended_executor: { type: "string", enum: ["ai", "shared", "human"] },
+          human_judgment: { type: "string", enum: ["low", "medium", "high"] },
+          reasoning: { type: "string" },
+          confidence: { type: "number" },
+          external_impact: { type: "boolean" },
+          decision_boundary: { type: "boolean" },
+          action_description: { type: "string" },
+          approval_reason: { type: "string" },
           depends_on: { type: "array", items: { type: "number" } }
         }
       }
@@ -46,13 +54,21 @@ export async function analyzeGoal(goal) {
   try {
     const result = await base44.integrations.Core.InvokeLLM({
       prompt: `You are an explainable AI delegation planner. Analyze this goal: "${goal}".
-Return a transparent risk assessment and 3-7 ordered subtasks. Assign each subtask to ai, shared, or human. Prioritize recoverability and require human control for irreversible or high-impact actions.`,
+Return a transparent risk assessment and 3-7 ordered subtasks. Assign each subtask to ai, shared, or human. Include a short recommendation reason, human-judgment level, confidence, and whether it crosses a decision boundary. Prioritize recoverability and require human approval for irreversible, external, or high-impact actions.`,
       response_json_schema: responseJsonSchema,
     });
-    return { ...result, tasks: result.tasks.map((task, index) => ({ ...task, order: task.order || index + 1, status: "pending" })) };
+    return { ...result, tasks: result.tasks.map((task, index) => ({
+      ...task,
+      order: task.order || index + 1,
+      recommended_executor: task.recommended_executor || task.executor,
+      human_judgment: task.human_judgment || (task.risk === "high" ? "high" : "medium"),
+      reasoning: task.reasoning || "The recommendation balances risk, recoverability, permission, and the need for human judgment.",
+      confidence: task.confidence || result.ai_confidence || .75,
+      decision_boundary: Boolean(task.decision_boundary || task.risk === "high" || task.permission === "required"),
+      status: "pending",
+    })) };
   } catch (error) {
     console.warn("Base44 analysis failed; using demo fallback.", error);
     return buildDemoAnalysis(goal);
   }
 }
-
