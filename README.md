@@ -1,41 +1,37 @@
-# DelegateAI — Trust & Delegation Flow
+# Delegate - Controlled AI Handoff
 
-A GitHub-ready React/Vite reconstruction of the deployed Base44 prototype at:
+A readable React/Vite reconstruction of the latest TrustOS delegation console:
 
-<https://trust-delegated-flow.base44.app>
+<https://trustos-delegation-console.kang99841.chatgpt.site/>
 
-This repository turns the static demonstration flow into a shared session model and provides Base44 Entity schemas for persistence.
+The project demonstrates a controlled enterprise workflow for delegating work to AI while keeping the user in charge of tool access and external actions.
 
-## What is included
+## Experience
 
-- Dashboard and the complete delegation flow
-- Goal analysis with Base44 `Core.InvokeLLM`
-- Demo fallback when the integration is unavailable
-- Shared session state persisted in local storage
-- Base44 repository helpers for sessions, tasks, execution events, trust events, and memory
-- Base44 Entity JSON schemas
-- Clear separation between demo fixtures and real session data
-- Explainable task-level AI / shared / human assignment controls
-- A real approval boundary that pauses before high-impact external action
-- Multi-stage agent execution with approval, editing, intervention, and recovery
-- Evidence-first trust review and event-driven reflection
-- Optional local-only Study Mode with an observer summary and interaction-friction indicators
+The prototype follows four steps:
 
-## HCD study scenario
+1. **Add context** - describe a goal or choose a prepared product scenario.
+2. **Review brief** - inspect the proposed workflow before anything runs.
+3. **Set controls** - choose a boundary for every tool: Automatic, Ask first, Draft only, or Blocked.
+4. **Approve result** - review paused actions, approve or skip them, and inspect the audit trail.
 
-Choose **“Analyze five user interviews and prepare a summary for the product team.”** in the Delegation Workspace. The final stakeholder-send task is intentionally high impact and triggers the decision boundary during execution.
-
-Study Mode is off by default. When enabled from the sidebar, observation events and dwell times are stored only in the browser's `localStorage`; no analytics are transmitted.
+Three prepared scenarios are included: product review, sprint planning, and checkout launch decision. All integrations and outputs are simulated in the browser; the prototype does not read a real Drive, Figma, Jira, Slack, or Teams account and never sends external messages.
 
 ## Run locally
 
 ```bash
 npm install
-copy .env.example .env.local
 npm run dev
 ```
 
-Open <http://localhost:5173>.
+Open <http://localhost:5173/trust-delegated-flow/>.
+
+## Production build
+
+```bash
+npm run build
+npm run preview
+```
 
 ## Live site
 
@@ -43,29 +39,12 @@ GitHub Pages deploys the `main` branch automatically through `.github/workflows/
 
 <https://huyuanqi.github.io/trust-delegated-flow/>
 
-## Base44 setup
+## Project structure
 
-The public app ID is already present in `.env.example`. Keep `VITE_DEMO_MODE=true` until the Entity schemas have been pushed and their security rules have been reviewed.
+- `src/App.jsx` - four-step delegation experience and approval flow
+- `src/data/scenarios.js` - scenarios, tools, actions, and control options
+- `src/styles.css` - responsive visual system for desktop and mobile
+- `public/favicon.svg` - project favicon
+- `base44/` - preserved Base44 schemas and integration helpers from the earlier prototype
 
-For a Base44 CLI project:
-
-```bash
-npm install -g base44@latest
-base44 link
-base44 entities push
-```
-
-`base44/.app.jsonc` is intentionally excluded from Git.
-
-## GitHub setup
-
-This directory is initialized with the `main` branch. After creating an empty repository on GitHub:
-
-```bash
-git remote add origin https://github.com/HUYUANQI/trust-delegated-flow.git
-git push -u origin main
-```
-
-## Important
-
-The original Base44 `.jsx` files were not publicly available. This codebase is a clean reconstruction based on the deployed application, its routes, UI text, runtime behavior, and published JavaScript bundle. Connect the Base44 app to GitHub if you need the exact original source history.
+The earlier dark dashboard implementation remains in Git history, so it can be inspected or restored without affecting the current deployment.
