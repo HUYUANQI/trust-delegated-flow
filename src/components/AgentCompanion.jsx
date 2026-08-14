@@ -22,7 +22,7 @@ export default function AgentCompanion({ note, onCommand, status }) {
               <strong>{stateLabels[status.state] ?? "Ready"}</strong>
             </div>
             <button type="button" onClick={() => setOpen(false)} aria-label="Close AI Agent panel">
-              脳
+              ×
             </button>
           </div>
           <p className="agent-current-status">{status.message}</p>

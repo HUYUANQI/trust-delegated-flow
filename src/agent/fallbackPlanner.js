@@ -1,26 +1,26 @@
 const intentPatterns = [
-  ["event", /birthday|dinner|event|party|venue|guest|鐢熸棩|鑱氶|娲诲姩|瀹翠細/i],
-  ["competitive", /competitor|competitive|market comparison|against three|绔炲搧|绔炰簤瀵规墜/i],
-  ["meeting", /meeting|minutes|workshop|浼氳|绾/i],
-  ["prioritization", /prioriti[sz]|what.*work on|next week.*team|浼樺厛绾鍏堝仛浠€涔?i],
-  ["planning", /sprint|roadmap|plan next|planning|璁″垝|杩唬/i],
-  ["feedback", /complaint|customer feedback|customers? (are )?(unhappy|dissatisfied)|鎶曡瘔|瀹㈡埛鍙嶉|涓嶆弧鎰?i],
-  ["product-analysis", /abandon|checkout|drop.?off|conversion|funnel|娴佸け|缁撹处|杞寲/i],
-  ["decision", /launch|ship|hold|readiness|decide whether|recommendation|涓婄嚎|鍙戝竷|鏄惁搴旇/i],
-  ["research", /ux|user research|interview|usability|research summary|鐢ㄦ埛鐮旂┒|璁胯皥|鍙敤鎬?i],
-  ["communication", /project update|project progress|status update|manager|stakeholder update|椤圭洰鏇存柊|椤圭洰杩涘睍|姹囨姤/i],
-  ["presentation", /presentation|slide|deck|婕旂ず|姹囨姤澶х翰|骞荤伅鐗?i],
-  ["risk", /biggest risk|major risk|risk in this project|鏈€澶ч闄﹟椤圭洰椋庨櫓/i],
-  ["writing", /write|draft|summari[sz]e|report|outline|prepare.*summary|鎾板啓|鑽夋嫙|鎬荤粨|鎶ュ憡|澶х翰/i],
+  ["event", /birthday|dinner|event|party|venue|guest|生日|聚餐|活动|宴会/i],
+  ["competitive", /competitor|competitive|market comparison|against three|竞品|竞争对手/i],
+  ["meeting", /meeting|minutes|workshop|会议|纪要/i],
+  ["prioritization", /prioriti[sz]|what.*work on|next week.*team|优先级|先做什么/i],
+  ["planning", /sprint|roadmap|plan next|planning|计划|迭代/i],
+  ["feedback", /complaint|customer feedback|customers? (are )?(unhappy|dissatisfied)|投诉|客户反馈|不满意/i],
+  ["product-analysis", /abandon|checkout|drop.?off|conversion|funnel|流失|结账|转化/i],
+  ["decision", /launch|ship|hold|readiness|decide whether|recommendation|上线|发布|是否应该/i],
+  ["research", /ux|user research|interview|usability|research summary|用户研究|访谈|可用性/i],
+  ["communication", /project update|project progress|status update|manager|stakeholder update|项目更新|项目进展|汇报/i],
+  ["presentation", /presentation|slide|deck|演示|汇报大纲|幻灯片/i],
+  ["risk", /biggest risk|major risk|risk in this project|最大风险|项目风险/i],
+  ["writing", /write|draft|summari[sz]e|report|outline|prepare.*summary|撰写|草拟|总结|报告|大纲/i],
 ];
 
 const templates = {
   research: {
     title: "Research synthesis",
     understanding: (goal) =>
-      `You want a concise, decision-ready synthesis of the research related to 鈥?{shorten(goal)}鈥?`,
+      `You want a concise, decision-ready synthesis of the research related to “${shorten(goal)}”.`,
     expectedOutput: "Research themes, key insights, implications, and recommended next actions.",
-    assumptions: ["I鈥檒l treat this as an internal working document unless you specify an external audience."],
+    assumptions: ["I’ll treat this as an internal working document unless you specify an external audience."],
     steps: [
       step("Locate relevant research material", "Identify the notes and evidence that are most relevant to the request.", "drive-search", "low"),
       step("Review research and design feedback", "Read the available research evidence and unresolved design comments.", "figma-comments", "low"),
@@ -31,7 +31,7 @@ const templates = {
   "product-analysis": {
     title: "Product problem investigation",
     understanding: (goal) =>
-      `You want to investigate the product behaviour behind 鈥?{shorten(goal)}鈥?and identify practical ways to improve it.`,
+      `You want to investigate the product behaviour behind “${shorten(goal)}” and identify practical ways to improve it.`,
     expectedOutput: "Root-cause hypotheses, supporting signals, risks, and a prioritised investigation plan.",
     assumptions: ["Without live analytics, findings will be labelled as hypotheses that need validation."],
     steps: [
@@ -45,9 +45,9 @@ const templates = {
   competitive: {
     title: "Competitive comparison",
     understanding: (goal) =>
-      `You want a structured comparison for 鈥?{shorten(goal)}鈥?rather than a list of disconnected competitor facts.`,
+      `You want a structured comparison for “${shorten(goal)}” rather than a list of disconnected competitor facts.`,
     expectedOutput: "Competitor comparison, differentiators, gaps, and a recommended product response.",
-    assumptions: ["I鈥檒l use publicly available information and clearly separate evidence from inference."],
+    assumptions: ["I’ll use publicly available information and clearly separate evidence from inference."],
     steps: [
       step("Define comparison criteria", "Set consistent criteria such as target users, capabilities, experience, and positioning.", "ai-structure", "low"),
       step("Collect public evidence", "Search current public information for the products being compared.", "web-search", "low"),
@@ -59,9 +59,9 @@ const templates = {
   feedback: {
     title: "Customer feedback analysis",
     understanding: (goal) =>
-      `You want to understand the customer signals in 鈥?{shorten(goal)}鈥? find recurring themes, and decide what deserves attention first.`,
+      `You want to understand the customer signals in “${shorten(goal)}”, find recurring themes, and decide what deserves attention first.`,
     expectedOutput: "Feedback themes, likely root causes, severity assessment, and recommended actions.",
-    assumptions: ["I鈥檒l analyse the feedback supplied in the request first and avoid inventing missing customer evidence."],
+    assumptions: ["I’ll analyse the feedback supplied in the request first and avoid inventing missing customer evidence."],
     steps: [
       step("Prepare the feedback for analysis", "Separate individual complaints, observations, and requested outcomes.", "ai-structure", "low"),
       step("Group recurring themes", "Classify the feedback by problem, user impact, and frequency signal.", "ai-classify", "low"),
@@ -73,9 +73,9 @@ const templates = {
   planning: {
     title: "Work planning brief",
     understanding: (goal) =>
-      `You want a focused, achievable plan for 鈥?{shorten(goal)}鈥?with priorities and dependencies made explicit.`,
+      `You want a focused, achievable plan for “${shorten(goal)}” with priorities and dependencies made explicit.`,
     expectedOutput: "Prioritised work plan, dependencies, trade-offs, and review-ready updates.",
-    assumptions: ["I鈥檒l optimise for an achievable internal plan rather than maximum scope."],
+    assumptions: ["I’ll optimise for an achievable internal plan rather than maximum scope."],
     steps: [
       step("Review current work and constraints", "Read relevant project status, open work, and known dependencies.", "jira-read", "low"),
       step("Identify the highest-value outcomes", "Clarify what must be achieved and what can remain out of scope.", "ai-analyze", "low"),
@@ -87,9 +87,9 @@ const templates = {
   prioritization: {
     title: "Priority recommendation",
     understanding: (goal) =>
-      `You want a defensible order of work for 鈥?{shorten(goal)}鈥? including the trade-offs behind the ranking.`,
+      `You want a defensible order of work for “${shorten(goal)}”, including the trade-offs behind the ranking.`,
     expectedOutput: "Ranked priorities, decision criteria, trade-offs, and a recommended first move.",
-    assumptions: ["I鈥檒l use impact, urgency, effort, and dependency risk as the initial criteria."],
+    assumptions: ["I’ll use impact, urgency, effort, and dependency risk as the initial criteria."],
     steps: [
       step("Clarify the decision criteria", "Define what a good priority decision should optimise for.", "ai-structure", "low"),
       step("Assess each item", "Evaluate impact, urgency, effort, confidence, and dependencies.", "ai-analyze", "low"),
@@ -100,9 +100,9 @@ const templates = {
   communication: {
     title: "Project update draft",
     understanding: (goal) =>
-      `You want a clear, audience-appropriate update for 鈥?{shorten(goal)}鈥?that communicates progress, risks, and next steps.`,
+      `You want a clear, audience-appropriate update for “${shorten(goal)}” that communicates progress, risks, and next steps.`,
     expectedOutput: "An editable project update with status, decisions, risks, and next actions.",
-    assumptions: ["I鈥檒l keep the tone concise and suitable for an internal manager or stakeholder."],
+    assumptions: ["I’ll keep the tone concise and suitable for an internal manager or stakeholder."],
     steps: [
       step("Review current project status", "Collect the relevant progress, decisions, risks, and upcoming milestones.", "jira-read", "low"),
       step("Identify the essential message", "Separate decision-relevant information from background detail.", "ai-analyze", "low"),
@@ -113,9 +113,9 @@ const templates = {
   meeting: {
     title: "Meeting summary",
     understanding: (goal) =>
-      `You want to turn 鈥?{shorten(goal)}鈥?into a concise record of decisions, actions, and unresolved questions.`,
+      `You want to turn “${shorten(goal)}” into a concise record of decisions, actions, and unresolved questions.`,
     expectedOutput: "Meeting summary, decisions, action items, owners to confirm, and open questions.",
-    assumptions: ["I鈥檒l avoid assigning owners when the meeting context does not name them."],
+    assumptions: ["I’ll avoid assigning owners when the meeting context does not name them."],
     steps: [
       step("Organise the meeting content", "Separate discussion topics, decisions, questions, and action items.", "ai-structure", "low"),
       step("Identify decisions and commitments", "Extract confirmed decisions and distinguish them from suggestions.", "ai-analyze", "low"),
@@ -125,9 +125,9 @@ const templates = {
   decision: {
     title: "Decision recommendation",
     understanding: (goal) =>
-      `You want an evidence-aware decision for 鈥?{shorten(goal)}鈥? including reasons to proceed, pause, or reduce risk.`,
+      `You want an evidence-aware decision for “${shorten(goal)}”, including reasons to proceed, pause, or reduce risk.`,
     expectedOutput: "Recommendation, evidence, uncertainties, risks, and next actions.",
-    assumptions: ["I鈥檒l treat the recommendation as advisory and show where more evidence is needed."],
+    assumptions: ["I’ll treat the recommendation as advisory and show where more evidence is needed."],
     steps: [
       step("Define the decision criteria", "Clarify what must be true for the decision to be safe and valuable.", "ai-structure", "low"),
       step("Review customer and design evidence", "Inspect relevant research and unresolved design feedback.", "figma-comments", "low"),
@@ -139,9 +139,9 @@ const templates = {
   presentation: {
     title: "Presentation outline",
     understanding: (goal) =>
-      `You want a coherent presentation structure for 鈥?{shorten(goal)}鈥?with a clear narrative and decision point.`,
+      `You want a coherent presentation structure for “${shorten(goal)}” with a clear narrative and decision point.`,
     expectedOutput: "Slide-by-slide outline, key messages, evidence placeholders, and closing action.",
-    assumptions: ["I鈥檒l create an outline rather than a finished visual deck."],
+    assumptions: ["I’ll create an outline rather than a finished visual deck."],
     steps: [
       step("Define the audience and objective", "Identify what the audience should understand or decide.", "ai-understand", "low"),
       step("Build the narrative", "Organise the story from context and evidence to recommendation.", "ai-structure", "low"),
@@ -151,7 +151,7 @@ const templates = {
   risk: {
     title: "Project risk analysis",
     understanding: (goal) =>
-      `You want to identify the most important risk behind 鈥?{shorten(goal)}鈥?and determine how to reduce it.`,
+      `You want to identify the most important risk behind “${shorten(goal)}” and determine how to reduce it.`,
     expectedOutput: "Primary risk, likelihood and impact rationale, warning signals, and mitigation actions.",
     assumptions: ["Without project evidence, the result will be a preliminary risk hypothesis rather than a verified finding."],
     steps: [
@@ -164,9 +164,9 @@ const templates = {
   event: {
     title: "Event plan",
     understanding: (goal) =>
-      `You want a practical plan for 鈥?{shorten(goal)}鈥?that balances people, budget, timing, and preferences.`,
+      `You want a practical plan for “${shorten(goal)}” that balances people, budget, timing, and preferences.`,
     expectedOutput: "Event checklist, option criteria, timeline, and an editable invitation draft.",
-    assumptions: ["I鈥檒l start with a flexible plan and leave guest count, budget, and dietary constraints as items to confirm."],
+    assumptions: ["I’ll start with a flexible plan and leave guest count, budget, and dietary constraints as items to confirm."],
     steps: [
       step("Define constraints and preferences", "List the guest count, budget, timing, location, and dietary needs to confirm.", "ai-structure", "low"),
       step("Identify suitable options", "Research public venue or format options that match the constraints.", "web-search", "low"),
@@ -178,9 +178,9 @@ const templates = {
   writing: {
     title: "Content draft",
     understanding: (goal) =>
-      `You want a useful, well-structured draft for 鈥?{shorten(goal)}鈥?that can be reviewed and refined.`,
+      `You want a useful, well-structured draft for “${shorten(goal)}” that can be reviewed and refined.`,
     expectedOutput: "A structured, editable draft with assumptions and suggested next edits.",
-    assumptions: ["I鈥檒l use a concise internal tone unless the request names another audience."],
+    assumptions: ["I’ll use a concise internal tone unless the request names another audience."],
     steps: [
       step("Clarify the purpose and audience", "Identify the intended outcome, reader, and level of detail.", "ai-understand", "low"),
       step("Structure the content", "Create a logical outline that supports the intended outcome.", "ai-structure", "low"),
@@ -190,20 +190,13 @@ const templates = {
   general: {
     title: "Delegated task plan",
     understanding: (goal) =>
-      `You want the AI to make progress on 鈥?{shorten(goal)}鈥?and return a reviewable, practical outcome.`,
+      `You want the AI to make progress on “${shorten(goal)}” and return a reviewable, practical outcome.`,
     expectedOutput: "Structured analysis, recommended approach, and a clear next action.",
-    assumptions: ["I鈥檒l keep the work inside the reasoning workspace unless an external source is clearly required."],
+    assumptions: ["I’ll keep the work inside the reasoning workspace unless an external source is clearly required."],
     steps: [
       step("Interpret the objective", "Clarify the desired outcome, constraints, and available context.", "ai-understand", "low"),
       step("Break down the task", "Turn the objective into a small set of useful work items.", "ai-structure", "low"),
-      step("Analyse the options", "Evaluate possible approaches, trade-offs, and missing information.", "ai-analyze", "low"),
-      step("Prepare the recommended outcome", "Create a useful answer or draft and identify the next action.", "ai-recommend", "low"),
-    ],
-  },
-};
-
-export function generateFallbackPlan(goal, context = {}) {
-  const cleanGoal = goal.trim();
+    �_m�G����ƭy�.trim();
   if (!cleanGoal) {
     return clarificationPlan(
       cleanGoal,
@@ -250,7 +243,7 @@ export function generateFallbackPlan(goal, context = {}) {
     expectedOutput: template.expectedOutput,
     assumptions: context.clarificationAnswer
       ? [
-          `I鈥檒l use your clarification 鈥?鈥?{context.clarificationAnswer}鈥?鈥?as part of the working context.`,
+          `I’ll use your clarification — “${context.clarificationAnswer}” — as part of the working context.`,
           ...template.assumptions,
         ]
       : template.assumptions,
@@ -274,7 +267,7 @@ export function reviseFallbackPlan(plan, feedback) {
     steps = steps.filter((item) => !item.toolId.startsWith(excludedTool));
   }
 
-  if (/customer|feedback|complaint|鐢ㄦ埛|瀹㈡埛|鍙嶉/i.test(cleanFeedback)) {
+  if (/customer|feedback|complaint|用户|客户|反馈/i.test(cleanFeedback)) {
     const hasFeedbackStep = steps.some((item) => item.toolId === "ai-classify");
     if (!hasFeedbackStep) {
       steps.splice(Math.min(2, steps.length), 0, {
@@ -287,7 +280,7 @@ export function reviseFallbackPlan(plan, feedback) {
     }
   }
 
-  if (/shorter|simpler|fewer|绮剧畝|绠€鐭?i.test(cleanFeedback) && steps.length > 3) {
+  if (/shorter|simpler|fewer|精简|简短/i.test(cleanFeedback) && steps.length > 3) {
     steps = steps.slice(0, 3);
   }
 
@@ -313,7 +306,7 @@ export function reviseFallbackPlan(plan, feedback) {
   return {
     ...plan,
     id: `plan-${Date.now()}`,
-    understanding: `${plan.understanding} The revised plan also follows this direction: 鈥?{cleanFeedback}鈥?`,
+    understanding: `${plan.understanding} The revised plan also follows this direction: “${cleanFeedback}”.`,
     assumptions: [...(plan.assumptions ?? []), `Revision applied: ${cleanFeedback}`],
     steps: steps.slice(0, 6).map((item, index) => ({
       ...item,
@@ -326,8 +319,8 @@ export function generateFallbackResult(goal, plan, execution = {}) {
   const completed = execution.items?.filter((item) => item.status === "completed").length ?? 0;
   const blocked = execution.items?.filter((item) => item.status === "blocked").map((item) => item.title) ?? [];
   const base = {
-    title: `${plan.title} 鈥?prepared outcome`,
-    summary: `A prototype result was generated for 鈥?{goal}鈥?after ${completed} planned step${completed === 1 ? "" : "s"} completed. No real external action was performed.`,
+    title: `${plan.title} — prepared outcome`,
+    summary: `A prototype result was generated for “${goal}” after ${completed} planned step${completed === 1 ? "" : "s"} completed. No real external action was performed.`,
     nextStep: "Review the prepared outcome, add real evidence where needed, and decide whether any draft should be used outside the prototype.",
     sections: [],
   };
@@ -383,7 +376,7 @@ function resultSections(intent, goal) {
       { title: "Recommendation", items: ["Choose the first item that advances the main outcome and removes a constraint for later work."] },
     ],
     communication: [
-      { title: "Draft project update", body: `Subject: Project update 鈥?${topic}\n\nProgress\n鈥?The work has been organised around the main outcome and current delivery risks.\n\nRisks / decisions\n鈥?Confirm the highest-impact open dependency and whether it changes timing or scope.\n\nNext steps\n鈥?Validate status with the source project data.\n鈥?Confirm owners and the next review point.` },
+      { title: "Draft project update", body: `Subject: Project update — ${topic}\n\nProgress\n• The work has been organised around the main outcome and current delivery risks.\n\nRisks / decisions\n• Confirm the highest-impact open dependency and whether it changes timing or scope.\n\nNext steps\n• Validate status with the source project data.\n• Confirm owners and the next review point.` },
       { title: "Before sharing", items: ["Replace the placeholders with verified project facts.", "Confirm the audience and desired decision.", "This draft was prepared only; it was not sent."] },
     ],
     meeting: [
@@ -397,16 +390,16 @@ function resultSections(intent, goal) {
     ],
     presentation: [
       { title: "Presentation outline", items: ["1. Decision or objective", "2. Current context", "3. Evidence and key insight", "4. Options and trade-offs", "5. Recommendation", "6. Next action"] },
-      { title: "Narrative advice", items: ["Lead with the audience鈥檚 decision, not the work performed.", "Use one evidence point per claim and label assumptions."] },
+      { title: "Narrative advice", items: ["Lead with the audience’s decision, not the work performed.", "Use one evidence point per claim and label assumptions."] },
     ],
     risk: [
       { title: "Leading risk", items: ["The biggest preliminary risk is making an important decision with incomplete or fragmented evidence.", "This can create false confidence, late rework, and unclear ownership."] },
       { title: "Mitigation", items: ["Name the decision owner and decision date.", "List the two pieces of evidence that could change the decision.", "Use a reversible next step while uncertainty remains high."] },
-      { title: "Confidence", items: ["Preliminary 鈥?real project context is required to verify the leading risk."] },
+      { title: "Confidence", items: ["Preliminary — real project context is required to verify the leading risk."] },
     ],
     event: [
       { title: "Event plan", items: ["Confirm guest count, budget, date, location, and dietary constraints.", "Shortlist two options and one low-risk backup.", "Reserve only after the main constraints are confirmed.", "Send the invitation after date and venue are final."] },
-      { title: "Invitation draft", body: "You鈥檙e invited! I鈥檓 planning a birthday dinner and would love you to join. Please hold the date while I confirm the final venue and dietary details." },
+      { title: "Invitation draft", body: "You’re invited! I’m planning a birthday dinner and would love you to join. Please hold the date while I confirm the final venue and dietary details." },
       { title: "Still needed", items: ["Guest count", "Budget range", "Location", "Dietary and accessibility needs"] },
     ],
     writing: [
@@ -445,23 +438,23 @@ function step(title, description, toolId, risk) {
 }
 
 function isVague(goal) {
-  const simple = goal.trim().replace(/[.!?銆傦紒锛焆+$/, "");
+  const simple = goal.trim().replace(/[.!?。！？]+$/, "");
   return (
     /^(prepare|create|write|draft|make)\s+(a\s+)?(report|summary|plan|update|presentation)$/i.test(simple) ||
     /^(help me|analyse this|analyze this|review this|summari[sz]e this)$/i.test(simple) ||
-    /^(鍑嗗|鍐檤鍒朵綔|鍒涘缓)(涓€浠??(鎶ュ憡|鎬荤粨|璁″垝|鏇存柊|婕旂ず)$/i.test(simple)
+    /^(准备|写|制作|创建)(一份)?(报告|总结|计划|更新|演示)$/i.test(simple)
   );
 }
 
 function excludedToolFromFeedback(feedback) {
-  const match = feedback.match(/(?:don't|do not|avoid|without|涓嶈|涓嶄娇鐢?\s+(?:use\s+)?(slack|teams|jira|figma|drive|web)/i);
+  const match = feedback.match(/(?:don't|do not|avoid|without|不要|不使用)\s+(?:use\s+)?(slack|teams|jira|figma|drive|web)/i);
   if (!match) return null;
   const tool = match[1].toLowerCase();
   return tool === "drive" ? "drive" : tool;
 }
 
 function sensitiveStepForGoal(goal) {
-  if (/send|post|publish|notify|鍙戦€亅鍙戝竷|閫氱煡/i.test(goal)) {
+  if (/send|post|publish|notify|发送|发布|通知/i.test(goal)) {
     const slack = /slack/i.test(goal);
     return {
       title: `Prepare and approve the ${slack ? "Slack" : "Teams"} message`,
@@ -471,7 +464,7 @@ function sensitiveStepForGoal(goal) {
       risk: "high",
     };
   }
-  if (/(update|change|edit).*(jira|issue)|(jira|issue).*(update|change|edit)|鏇存柊.*jira/i.test(goal)) {
+  if (/(update|change|edit).*(jira|issue)|(jira|issue).*(update|change|edit)|更新.*jira/i.test(goal)) {
     return {
       title: "Prepare and approve the Jira update",
       description:
@@ -485,5 +478,5 @@ function sensitiveStepForGoal(goal) {
 
 function shorten(value, length = 72) {
   const compact = value.trim().replace(/\s+/g, " ");
-  return compact.length > length ? `${compact.slice(0, length - 1)}鈥 : compact;
+  return compact.length > length ? `${compact.slice(0, length - 1)}…` : compact;
 }

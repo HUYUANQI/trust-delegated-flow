@@ -285,7 +285,7 @@ export function derivePlanActions(plan) {
       boundary: registryAction.defaultBoundary,
       recommendedBoundary: registryAction.defaultBoundary,
       reason: recommendationReason(registryAction),
-      why: `${registryAction.explanation} It supports the plan step: 鈥?{step.title}鈥?`,
+      why: `${registryAction.explanation} It supports the plan step: “${step.title}”.`,
     });
   });
 

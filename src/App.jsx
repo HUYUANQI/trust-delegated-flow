@@ -43,7 +43,7 @@ export default function App() {
     message: stepStatusCopy.context,
   });
   const [agentNote, setAgentNote] = useState(
-    "Give me a task and I鈥檒l build a plan before anything runs.",
+    "Give me a task and I’ll build a plan before anything runs.",
   );
 
   const currentIndex = steps.findIndex((step) => step.id === currentStep);
@@ -136,7 +136,7 @@ export default function App() {
       const nextPlan = await reviseAgentPlan(plan, feedback);
       setPlan(nextPlan);
       setActions(derivePlanActions(nextPlan));
-      setAgentNote(`Revision applied: 鈥?{feedback.trim()}鈥漙);
+      setAgentNote(`Revision applied: “${feedback.trim()}”`);
     } finally {
       setPlanning(false);
       setAgentStatus({ state: "idle", message: stepStatusCopy.brief });
@@ -151,7 +151,7 @@ export default function App() {
     setActions(nextActions);
     setCurrentStep("controls");
     setAgentStatus({ state: "idle", message: stepStatusCopy.controls });
-    setAgentNote("I鈥檝e recommended a boundary for every capability in this plan.");
+    setAgentNote("I’ve recommended a boundary for every capability in this plan.");
     goToTop();
   }
 
@@ -167,7 +167,7 @@ export default function App() {
     setRunKey((value) => value + 1);
     setCurrentStep("result");
     setAgentStatus({ state: "working", message: "Starting the approved plan" });
-    setAgentNote("I鈥檒l pause exactly where you chose Ask first.");
+    setAgentNote("I’ll pause exactly where you chose Ask first.");
     goToTop();
   }
 
@@ -182,7 +182,7 @@ export default function App() {
     setRunKey(0);
     setStopToken(0);
     setAgentStatus({ state: "idle", message: stepStatusCopy.context });
-    setAgentNote("Give me a task and I鈥檒l build a plan before anything runs.");
+    setAgentNote("Give me a task and I’ll build a plan before anything runs.");
     goToTop();
   }
 
@@ -212,7 +212,7 @@ export default function App() {
     setAgentNote(
       currentStep === "result"
         ? "The highlighted execution step shows what the agent is doing and whether it needs approval."
-        : `You are on 鈥?{steps[currentIndex].label}鈥? The agent will not run work before the plan and controls are reviewed.`,
+        : `You are on “${steps[currentIndex].label}”. The agent will not run work before the plan and controls are reviewed.`,
     );
   }
 

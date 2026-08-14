@@ -43,14 +43,14 @@ export function ContextScreen({
           value={goal}
         />
         <div className="composer-footer">
-          <span>Any reasonable task works 鈥?nothing runs before review.</span>
+          <span>Any reasonable task works — nothing runs before review.</span>
           <button
             className="primary-button"
             type="button"
             onClick={onNext}
             disabled={planning}
           >
-            {planning ? "Building plan鈥? : "Build a plan"}
+            {planning ? "Building plan…" : "Build a plan"}
           </button>
         </div>
       </div>
@@ -245,7 +245,7 @@ export function BriefScreen({
                 <div className="step-copy">
                   <strong>{step.title}</strong>
                   <p>{step.description}</p>
-                  <span>{getToolAction(step.toolId).name} 路 {step.risk} risk</span>
+                  <span>{getToolAction(step.toolId).name} · {step.risk} risk</span>
                 </div>
               )}
               {editingId !== step.id && (
@@ -270,7 +270,7 @@ export function BriefScreen({
       <article className="revision-card">
         <div>
           <span className="section-label">Ask AI to revise</span>
-          <p>For example: 鈥淒on鈥檛 use Slack鈥?or 鈥淔ocus more on customer feedback.鈥?/p>
+          <p>For example: “Don’t use Slack” or “Focus more on customer feedback.”</p>
         </div>
         <div className="revision-input">
           <input
@@ -279,7 +279,7 @@ export function BriefScreen({
             placeholder="Tell the agent how to change the plan..."
           />
           <button className="secondary-button" type="button" onClick={submitRevision} disabled={!revision.trim() || planning}>
-            {planning ? "Revising鈥? : "Revise"}
+            {planning ? "Revising…" : "Revise"}
           </button>
         </div>
       </article>
@@ -308,7 +308,7 @@ export function ControlsScreen({ actions, onBack, onNext, onUpdate, plan }) {
 
       <div className="control-context">
         <strong>{plan.title}</strong>
-        <span>{actions.length} required capabilities 路 Prototype simulation</span>
+        <span>{actions.length} required capabilities · Prototype simulation</span>
       </div>
 
       <div className="control-list">
@@ -469,7 +469,7 @@ export function RunScreen({
         );
         setAudit((current) => [
           ...current,
-          createAuditEvent(`${currentItem.title} skipped 鈥?access blocked`, "warning"),
+          createAuditEvent(`${currentItem.title} skipped — access blocked`, "warning"),
         ]);
         setPhase("running");
         return;
@@ -593,7 +593,7 @@ export function RunScreen({
         <span className="eyebrow blue">Task completed</span>
         <h1>{result.title}</h1>
         <p className="result-goal"><strong>Goal:</strong> {goal}</p>
-        <div className="simulation-banner">Prototype simulation 路 Prepared, not externally executed</div>
+        <div className="simulation-banner">Prototype simulation · Prepared, not externally executed</div>
         <p className="lead">{result.summary}</p>
 
         <div className="dynamic-result-stack">
@@ -629,7 +629,7 @@ export function RunScreen({
       <span className="eyebrow blue">Agent execution</span>
       <h1>{runHeading(phase)}</h1>
       <p className="result-goal"><strong>Goal:</strong> {goal}</p>
-      <div className="simulation-banner">Prototype simulation 路 No real integration is being used</div>
+      <div className="simulation-banner">Prototype simulation · No real integration is being used</div>
       <p className="lead">{runLead(phase)}</p>
 
       <div className="progress-line" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow={progress}>
@@ -717,7 +717,7 @@ function toolClass(id) {
 }
 
 function statusIcon(status) {
-  return { pending: "鈼?, running: "鈼?, completed: "鉁?, "needs-approval": "!", blocked: "鈥?, failed: "脳" }[status] ?? "鈼?;
+  return { pending: "○", running: "●", completed: "✓", "needs-approval": "!", blocked: "—", failed: "×" }[status] ?? "○";
 }
 
 function statusLabel(status) {

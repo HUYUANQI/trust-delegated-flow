@@ -21,15 +21,15 @@ export function createAuditEvent(message, kind = "info") {
 }
 
 export function completionMessage(step, action, boundary) {
-  if (boundary === "Blocked") return `${step.title} skipped 鈥?access blocked.`;
+  if (boundary === "Blocked") return `${step.title} skipped — access blocked.`;
   if (action.type === "publish") {
-    return `${step.title} simulated after approval 鈥?nothing was actually sent.`;
+    return `${step.title} simulated after approval — nothing was actually sent.`;
   }
   if (action.type === "write" || boundary === "Draft only") {
-    return `${step.title} completed 鈥?a private draft was prepared.`;
+    return `${step.title} completed — a private draft was prepared.`;
   }
   if (action.type === "read") {
-    return `${step.title} completed in prototype simulation 鈥?no external data was changed.`;
+    return `${step.title} completed in prototype simulation — no external data was changed.`;
   }
   return `${step.title} completed in the reasoning workspace.`;
 }
@@ -37,12 +37,12 @@ export function completionMessage(step, action, boundary) {
 export function runningMessage(step) {
   const action = getToolAction(step.toolId);
   const byType = {
-    read: `Reviewing the information needed for 鈥?{step.title}鈥濃€,
-    write: `Preparing a reviewable draft for 鈥?{step.title}鈥濃€,
-    publish: `Preparing the proposed external action for approval鈥,
-    reasoning: `Working through 鈥?{step.title}鈥濃€,
+    read: `Reviewing the information needed for “${step.title}”…`,
+    write: `Preparing a reviewable draft for “${step.title}”…`,
+    publish: `Preparing the proposed external action for approval…`,
+    reasoning: `Working through “${step.title}”…`,
   };
-  return byType[action.type] ?? `Working on 鈥?{step.title}鈥濃€;
+  return byType[action.type] ?? `Working on “${step.title}”…`;
 }
 
 export function discoveryForPlan(plan, completedCount) {
