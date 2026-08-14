@@ -8,7 +8,9 @@ import {
 } from "../agent/executor";
 import { generateAgentResult } from "../agent/planner";
 import {
+  autonomyPresets,
   boundaryOptions,
+  deriveMcpSelection,
   getToolAction,
 } from "../agent/toolRegistry";
 import { examplePrompts } from "../data/scenarios";
@@ -29,10 +31,10 @@ export function ContextScreen({
   return (
     <section className="screen context-screen">
       <span className="eyebrow">Controlled AI delegation</span>
-      <h1>What do you want AI to handle?</h1>
+      <h1>Tell the agent what you want to accomplish.</h1>
       <p className="lead">
-        Describe a task, goal, or problem. AI will understand the request,
-        build a plan, and ask you before taking sensitive actions.
+        You do not need to choose an MCP server. The agent will identify the
+        capabilities it needs, explain its choices, and ask before sensitive actions.
       </p>
 
       <div className="goal-composer">
@@ -126,6 +128,7 @@ export function BriefScreen({
   goal,
   onBack,
   onContinue,
+  onMcpChoice,
   onPlanChange,
   onRegenerate,
   onRevise,
@@ -135,6 +138,7 @@ export function BriefScreen({
   const [editingId, setEditingId] = useState(null);
   const [editDraft, setEditDraft] = useState({ title: "", description: "" });
   const [revision, setRevision] = useState("");
+  const mcpSelection = useMemo(() => deriveMcpSelection(plan), [plan]);
 
   function beginEdit(step) {
     setEditingId(step.id);
@@ -260,6 +264,102 @@ export function BriefScreen({
         <button className="add-step-button" type="button" onClick={addStep} disabled={plan.steps.length >= 6}>+ Add a step</button>
       </article>
 
+      <article className="surface mcp-selection-card">
+        <div className="surface-heading mcp-heading">
+          <div>
+            <span className="section-label">AI-selected MCP capabilities</span>
+            <h2>
+              {mcpSelection.selected.length
+                ? `AI selected ${mcpSelection.selected.length} of ${mcpSelection.catalogSize} available capabilities.`
+                : `AI selected 0 of ${mcpSelection.catalogSize} external capabilities.`}
+            </h2>
+            <p>
+              You do not need to choose every MCP server. The agent selected the
+              smallest relevant set for this plan.
+            </p>
+          </div>
+          <div className={`confidence-badge ${mcpSelection.confidence.level.toLowerCase()}`}>
+            <span>Tool-selection confidence</span>
+            <strong>{mcpSelection.confidence.level}</strong>
+          </div>
+        </div>
+
+        <details className="confidence-details">
+          <summary>Why this confidence level?</summary>
+          <p>{mcpSelection.confidence.reason}</p>
+        </details>
+
+        {mcpSelection.selected.length ? (
+          <div className="mcp-card-grid">
+            {mcpSelection.selected.map((action) => (
+              <article className="mcp-capability-card" key={action.id}>
+                <div className="mcp-capability-title">
+                  <div className={`tool-mark ${toolClass(action.id)}`}>{action.mark}</div>
+                  <div><strong>{action.name}</strong><span>{action.action}</span></div>
+                </div>
+                <dl className="compact-facts">
+                  <div><dt>Permission</dt><dd>{action.permission}</dd></div>
+                  <div><dt>Scope</dt><dd>{action.scope}</dd></div>
+                </dl>
+                <details className="permission-details">
+                  <summary>Why was this selected?</summary>
+                  <p>{action.selectionReason}</p>
+                  <p><strong>Lower-risk alternative:</strong> {action.lowerRiskAlternative}</p>
+                </details>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div className="no-mcp-message">
+            The supplied context is enough for analysis. Avoiding unrelated MCP access is part of the recommendation.
+          </div>
+        )}
+
+        {mcpSelection.ambiguity && (
+          <article className="ambiguity-card">
+            <span className="ask-pill">Source choice needs judgment</span>
+            <h3>{mcpSelection.ambiguity.question}</h3>
+            <p><strong>AI recommendation:</strong> {mcpSelection.ambiguity.recommendation}</p>
+            <p>{mcpSelection.ambiguity.reason}</p>
+            <div className="inline-actions">
+              <button
+                className="primary-button small-button"
+                type="button"
+                onClick={() => {
+                  onMcpChoice(mcpSelection.ambiguity.recommendedToolId, mcpSelection.ambiguity);
+                }}
+              >Use recommendation</button>
+              <button
+                className="secondary-button small-button"
+                type="button"
+                onClick={() => {
+                  onMcpChoice(mcpSelection.ambiguity.alternativeToolId, mcpSelection.ambiguity);
+                }}
+              >Choose another source</button>
+            </div>
+            <details className="permission-details"><summary>Why?</summary><p>{mcpSelection.ambiguity.reason}</p></details>
+          </article>
+        )}
+
+        {plan.sourceChoiceResolved && (
+          <div className="source-choice-confirmed">
+            Source choice confirmed: <strong>{plan.sourceChoiceLabel}</strong>. The plan and capability set reflect this choice.
+          </div>
+        )}
+
+        <details className="considered-details">
+          <summary>Other capabilities considered ({mcpSelection.considered.length})</summary>
+          <div className="considered-list">
+            {mcpSelection.considered.map((action) => (
+              <div key={action.id}>
+                <strong>{action.name} · {action.action}</strong>
+                <p>{action.reasonNotSelected}</p>
+              </div>
+            ))}
+          </div>
+        </details>
+      </article>
+
       {plan.assumptions?.length > 0 && (
         <article className="assumption-card">
           <span className="section-label">Assumptions</span>
@@ -295,7 +395,7 @@ export function BriefScreen({
   );
 }
 
-export function ControlsScreen({ actions, onBack, onNext, onUpdate, plan }) {
+export function ControlsScreen({ actions, activePreset, onBack, onNext, onPreset, onUpdate, plan }) {
   return (
     <section className="screen wide-screen">
       <button className="text-button" type="button" onClick={onBack}>Back to brief</button>
@@ -311,6 +411,24 @@ export function ControlsScreen({ actions, onBack, onNext, onUpdate, plan }) {
         <span>{actions.length} required capabilities · Prototype simulation</span>
       </div>
 
+      <div className="preset-grid" aria-label="Autonomy presets">
+        {autonomyPresets.map((preset) => (
+          <button
+            className={activePreset === preset.id ? "preset-card active" : "preset-card"}
+            type="button"
+            onClick={() => onPreset(preset.id)}
+            aria-pressed={activePreset === preset.id}
+            key={preset.id}
+          >
+            <span>{preset.recommended ? "Recommended" : "Autonomy preset"}</span>
+            <strong>{preset.name}</strong>
+            <p>{preset.description}</p>
+          </button>
+        ))}
+      </div>
+
+      <p className="preset-note">The preset fills every control below. You can still override any action.</p>
+
       <div className="control-list">
         {actions.map((action) => (
           <article className="dynamic-control-row" key={action.id}>
@@ -322,6 +440,11 @@ export function ControlsScreen({ actions, onBack, onNext, onUpdate, plan }) {
               </div>
               <p>{action.action}</p>
               <p className="recommendation-reason"><strong>Reason:</strong> {action.reason}</p>
+              {action.external && (
+                <div className="scope-line">
+                  <span>{action.permission}</span><span>{action.scope}</span><span>{action.duration}</span>
+                </div>
+              )}
               <details className="permission-details">
                 <summary>Why does AI need this?</summary>
                 <p>{action.why}</p>
@@ -364,9 +487,11 @@ export function RunScreen({
   onBack,
   onRestart,
   plan,
+  pauseToken,
   stopToken,
 }) {
   const [items, setItems] = useState(() => createExecutionItems(plan));
+  const [runtimeActions, setRuntimeActions] = useState(actions);
   const [phase, setPhase] = useState("running");
   const [activeId, setActiveId] = useState(null);
   const [approvalId, setApprovalId] = useState(null);
@@ -374,6 +499,12 @@ export function RunScreen({
   const [approvalDraft, setApprovalDraft] = useState("");
   const [discovery, setDiscovery] = useState(null);
   const [discoveryHandled, setDiscoveryHandled] = useState(false);
+  const [showDiscoveryWhy, setShowDiscoveryWhy] = useState(false);
+  const [violation, setViolation] = useState(null);
+  const [approvalCount, setApprovalCount] = useState(0);
+  const [blockedCrossings, setBlockedCrossings] = useState(0);
+  const [temporaryGrants, setTemporaryGrants] = useState([]);
+  const [showRunWhy, setShowRunWhy] = useState(false);
   const [result, setResult] = useState(null);
   const [audit, setAudit] = useState(() => [
     createAuditEvent("Goal received"),
@@ -381,14 +512,24 @@ export function RunScreen({
     createAuditEvent("User reviewed the workflow and set autonomy controls"),
   ]);
   const previousStopToken = useRef(stopToken);
+  const previousPauseToken = useRef(pauseToken);
 
   const actionMap = useMemo(
-    () => Object.fromEntries(actions.map((action) => [action.id, action])),
-    [actions],
+    () => Object.fromEntries(runtimeActions.map((action) => [action.id, action])),
+    [runtimeActions],
   );
   const resolved = items.filter((item) => ["completed", "blocked", "failed"].includes(item.status)).length;
   const progress = items.length ? Math.round((resolved / items.length) * 100) : 0;
   const approvalItem = items.find((item) => item.id === approvalId);
+  const approvalAction = approvalItem
+    ? actionMap[getToolAction(approvalItem.toolId).id] ?? getToolAction(approvalItem.toolId)
+    : null;
+  const violationItem = violation ? items.find((item) => item.id === violation.itemId) : null;
+
+  function actionForItem(item) {
+    const registryAction = getToolAction(item.toolId);
+    return actionMap[registryAction.id] ?? { ...registryAction, boundary: registryAction.defaultBoundary };
+  }
 
   useEffect(() => {
     if (previousStopToken.current === stopToken) return;
@@ -407,6 +548,12 @@ export function RunScreen({
     setAudit((current) => [...current, createAuditEvent("User stopped the prototype task", "warning")]);
     onAgentStatus({ state: "stopped", message: "Task stopped by the user" });
   }, [onAgentStatus, phase, stopToken]);
+
+  useEffect(() => {
+    if (previousPauseToken.current === pauseToken) return;
+    previousPauseToken.current = pauseToken;
+    togglePause();
+  }, [pauseToken]);
 
   useEffect(() => {
     if (phase !== "running") return;
@@ -469,9 +616,12 @@ export function RunScreen({
         );
         setAudit((current) => [
           ...current,
-          createAuditEvent(`${currentItem.title} skipped — access blocked`, "warning"),
+          createAuditEvent(`Boundary prevented: ${currentItem.title} was not performed`, "warning"),
         ]);
-        setPhase("running");
+        setViolation({ itemId: activeId, actionId: registryAction.id });
+        setBlockedCrossings((value) => value + 1);
+        setPhase("boundary-prevented");
+        onAgentStatus({ state: "waiting", message: `${registryAction.name} was blocked by your boundary` });
         return;
       }
 
@@ -499,7 +649,7 @@ export function RunScreen({
           ...current,
           createAuditEvent("Agent proposed a plan adjustment", "approval"),
         ]);
-        onAgentStatus({ state: "waiting", message: "A new risk signal may change the plan" });
+        onAgentStatus({ state: "waiting", message: "A new MCP permission is needed to continue" });
       } else {
         setPhase("running");
       }
@@ -521,7 +671,26 @@ export function RunScreen({
     return () => {
       cancelled = true;
     };
-  }, [audit, goal, items, onAgentStatus, phase, plan]);
+  }, [goal, items, onAgentStatus, phase, plan]);
+
+  function togglePause() {
+    if (phase === "paused") {
+      setPhase("running");
+      setAudit((current) => [...current, createAuditEvent("User resumed the agent", "success")]);
+      onAgentStatus({ state: "working", message: "Agent resumed within the same boundaries" });
+      return;
+    }
+    if (!["running", "executing"].includes(phase)) return;
+    if (phase === "executing" && activeId) {
+      setItems((current) => current.map((item) =>
+        item.id === activeId ? { ...item, status: "pending", statusMessage: "Paused before the simulated step completed." } : item,
+      ));
+      setActiveId(null);
+    }
+    setPhase("paused");
+    setAudit((current) => [...current, createAuditEvent("User paused the agent", "warning")]);
+    onAgentStatus({ state: "waiting", message: "Agent paused by the user" });
+  }
 
   function approveAction() {
     const item = items.find((entry) => entry.id === approvalId);
@@ -543,6 +712,25 @@ export function RunScreen({
       ...current,
       createAuditEvent(`User approved the prepared ${action.name} action; no real external action occurred`, "success"),
     ]);
+    setApprovalCount((value) => value + 1);
+    setApprovalId(null);
+    setEditApproval(false);
+    setPhase("running");
+  }
+
+  function blockCapability() {
+    const item = items.find((entry) => entry.id === approvalId);
+    if (!item || !approvalAction) return;
+    setRuntimeActions((current) => current.map((action) =>
+      action.id === approvalAction.id ? { ...action, boundary: "Blocked" } : action,
+    ));
+    setItems((current) => current.map((entry) =>
+      entry.id === approvalId
+        ? { ...entry, status: "blocked", statusMessage: "Capability blocked by the user; the action was not performed." }
+        : entry,
+    ));
+    setBlockedCrossings((value) => value + 1);
+    setAudit((current) => [...current, createAuditEvent(`User blocked ${approvalAction.name}; the proposed action was not performed`, "warning")]);
     setApprovalId(null);
     setEditApproval(false);
     setPhase("running");
@@ -566,6 +754,21 @@ export function RunScreen({
 
   function addDiscovery() {
     if (!discovery) return;
+    const temporaryAction = {
+      ...discovery.action,
+      boundary: "Automatic",
+      recommendedBoundary: "Ask first",
+      temporary: true,
+      external: true,
+      selectionReason: discovery.why,
+      visibility: "Not externally visible",
+      impact: "Read-only access within the approved scope",
+    };
+    setRuntimeActions((current) => [
+      ...current.filter((action) => action.id !== temporaryAction.id),
+      temporaryAction,
+    ]);
+    setTemporaryGrants((current) => [...new Set([...current, temporaryAction.id])]);
     setItems((current) => {
       const firstPending = current.findIndex((item) => item.status === "pending");
       if (firstPending === -1) return [...current, discovery.step];
@@ -575,7 +778,45 @@ export function RunScreen({
         ...current.slice(firstPending),
       ];
     });
-    setAudit((current) => [...current, createAuditEvent(`User added: ${discovery.step.title}`, "success")]);
+    setApprovalCount((value) => value + 1);
+    setAudit((current) => [...current, createAuditEvent(`User allowed ${temporaryAction.name} once · ${temporaryAction.scope} · ${temporaryAction.duration}`, "success")]);
+    setDiscovery(null);
+    setPhase("running");
+  }
+
+  function useDiscoveryAlternative() {
+    if (!discovery) return;
+    const alternativeAction = {
+      ...discovery.alternative,
+      boundary: "Automatic",
+      recommendedBoundary: "Automatic",
+      temporary: discovery.alternative.id !== "ai-analyze",
+      external: !discovery.alternative.id.startsWith("ai-"),
+      selectionReason: "Chosen as the lower-access alternative during execution.",
+      visibility: "Not externally visible",
+      impact: "Does not change external data",
+    };
+    setRuntimeActions((current) => [
+      ...current.filter((action) => action.id !== alternativeAction.id),
+      alternativeAction,
+    ]);
+    if (alternativeAction.temporary) {
+      setTemporaryGrants((current) => [...new Set([...current, alternativeAction.id])]);
+      setApprovalCount((value) => value + 1);
+    }
+    const alternativeStep = {
+      ...discovery.step,
+      id: `${discovery.step.id}-alternative`,
+      title: `Use the lower-access alternative: ${alternativeAction.name}`,
+      toolId: alternativeAction.id,
+      statusMessage: "Waiting to use the selected alternative.",
+    };
+    setItems((current) => {
+      const firstPending = current.findIndex((item) => item.status === "pending");
+      if (firstPending === -1) return [...current, alternativeStep];
+      return [...current.slice(0, firstPending), alternativeStep, ...current.slice(firstPending)];
+    });
+    setAudit((current) => [...current, createAuditEvent(`User chose ${alternativeAction.name} instead of the requested MCP`, "success")]);
     setDiscovery(null);
     setPhase("running");
   }
@@ -586,7 +827,49 @@ export function RunScreen({
     setPhase("running");
   }
 
+  function keepBlocked() {
+    if (!violationItem) return;
+    setAudit((current) => [...current, createAuditEvent(`User kept ${violationItem.title} blocked`, "success")]);
+    setViolation(null);
+    setPhase("running");
+  }
+
+  function allowViolationOnce() {
+    if (!violationItem) return;
+    const action = getToolAction(violationItem.toolId);
+    setItems((current) => current.map((item) =>
+      item.id === violationItem.id
+        ? { ...item, status: "completed", statusMessage: `${item.title} allowed once in prototype simulation; the standing boundary remains Blocked.` }
+        : item,
+    ));
+    setApprovalCount((value) => value + 1);
+    setAudit((current) => [...current, createAuditEvent(`User allowed ${action.name} once; no standing access was changed`, "success")]);
+    setViolation(null);
+    setPhase("running");
+  }
+
+  function changeViolationBoundary() {
+    if (!violation) return;
+    setRuntimeActions((current) => current.map((action) =>
+      action.id === violation.actionId ? { ...action, boundary: "Ask first" } : action,
+    ));
+    setItems((current) => current.map((item) =>
+      item.id === violation.itemId
+        ? { ...item, status: "pending", statusMessage: "Boundary changed to Ask first; waiting to retry." }
+        : item,
+    ));
+    setAudit((current) => [...current, createAuditEvent("User changed the blocked capability to Ask first", "approval")]);
+    setViolation(null);
+    setPhase("running");
+  }
+
   if (phase === "complete" && result) {
+    const completedItems = items.filter((item) => item.status === "completed");
+    const capabilitiesUsed = new Set(completedItems.map((item) => getToolAction(item.toolId).id));
+    const automaticActions = completedItems.filter((item) => actionForItem(item).boundary === "Automatic").length;
+    const usedMcpActions = runtimeActions.filter((action) =>
+      action.external && completedItems.some((item) => getToolAction(item.toolId).id === action.id),
+    );
     return (
       <section className="screen compact-screen result-screen">
         <div className="done-mark">OK</div>
@@ -595,6 +878,33 @@ export function RunScreen({
         <p className="result-goal"><strong>Goal:</strong> {goal}</p>
         <div className="simulation-banner">Prototype simulation · Prepared, not externally executed</div>
         <p className="lead">{result.summary}</p>
+
+        <article className="surface trust-summary">
+          <div className="surface-heading">
+            <div><span className="section-label">Trust summary</span><h2>Your controls were respected</h2></div>
+            <span className="status-pill success">Verified in simulation</span>
+          </div>
+          <div className="trust-metrics">
+            <div><strong>{capabilitiesUsed.size}</strong><span>Capabilities used</span></div>
+            <div><strong>{automaticActions}</strong><span>Automatic actions</span></div>
+            <div><strong>{approvalCount}</strong><span>User approvals</span></div>
+            <div><strong>{blockedCrossings}</strong><span>Blocked crossings</span></div>
+          </div>
+          <ul className="respect-list">
+            <li>No messages were sent automatically.</li>
+            <li>No shared records were modified without approval.</li>
+            <li>Blocked capabilities were never accessed unless you explicitly allowed one use.</li>
+            <li>{temporaryGrants.length ? `${temporaryGrants.length} temporary permission${temporaryGrants.length === 1 ? "" : "s"} expired when this run finished.` : "No temporary access remained open."}</li>
+          </ul>
+          {usedMcpActions.length > 0 && (
+            <details className="considered-details">
+              <summary>Why these MCPs were used</summary>
+              <div className="considered-list">
+                {usedMcpActions.map((action) => <div key={action.id}><strong>{action.name}</strong><p>{action.selectionReason ?? action.explanation}</p></div>)}
+              </div>
+            </details>
+          )}
+        </article>
 
         <div className="dynamic-result-stack">
           {result.sections.map((section) => (
@@ -627,24 +937,43 @@ export function RunScreen({
   return (
     <section className="screen compact-screen run-screen">
       <span className="eyebrow blue">Agent execution</span>
-      <h1>{runHeading(phase)}</h1>
+      <h1>Agent is working within your boundaries.</h1>
       <p className="result-goal"><strong>Goal:</strong> {goal}</p>
       <div className="simulation-banner">Prototype simulation · No real integration is being used</div>
       <p className="lead">{runLead(phase)}</p>
+
+      <div className="run-command-bar" aria-label="Agent controls">
+        <button type="button" onClick={togglePause} disabled={!["running", "executing", "paused"].includes(phase)}>{phase === "paused" ? "Resume agent" : "Pause agent"}</button>
+        <button type="button" onClick={onBack}>Change boundaries</button>
+        <button type="button" onClick={() => setShowRunWhy((value) => !value)}>Ask why</button>
+        <button type="button" onClick={() => {
+          setItems((current) => current.map((item) => ["pending", "running", "needs-approval"].includes(item.status) ? { ...item, status: "blocked", statusMessage: "Stopped by the user." } : item));
+          setPhase("stopped");
+          onAgentStatus({ state: "stopped", message: "Task stopped by the user" });
+          setAudit((current) => [...current, createAuditEvent("User stopped the prototype task", "warning")]);
+        }}>Stop task</button>
+      </div>
+      {showRunWhy && <div className="run-why">The agent runs only capabilities shown below. Automatic actions are low-risk, Ask first actions pause here, Draft only actions stay private, and Blocked actions are prevented.</div>}
 
       <div className="progress-line" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow={progress}>
         <span style={{ width: `${progress}%` }} />
       </div>
       <div className="progress-copy"><span>Progress</span><strong>{progress}%</strong></div>
 
-      {phase === "waiting" && approvalItem && (
+      {phase === "waiting" && approvalItem && approvalAction && (
         <article className="approval-panel">
           <div className="approval-title">
-            <div className={`tool-mark ${toolClass(approvalItem.toolId)}`}>{getToolAction(approvalItem.toolId).mark}</div>
-            <div><span className="ask-pill">Ask first</span><h2>{getToolAction(approvalItem.toolId).name}</h2></div>
+            <div className={`tool-mark ${toolClass(approvalItem.toolId)}`}>{approvalAction.mark}</div>
+            <div><span className="ask-pill">Approval checkpoint</span><h2>{approvalAction.name}</h2></div>
           </div>
           <h3>{approvalItem.title}</h3>
-          <p>{getToolAction(approvalItem.toolId).explanation}</p>
+          <dl className="approval-facts">
+            <div><dt>Capability</dt><dd>{approvalAction.name} · {approvalAction.action}</dd></div>
+            <div><dt>Visibility</dt><dd>{approvalAction.visibility ?? "Not externally visible"}</dd></div>
+            <div><dt>Impact</dt><dd>{approvalAction.impact ?? approvalAction.explanation}</dd></div>
+            <div><dt>AI recommendation</dt><dd>Approve once if this proposed action matches your intent.</dd></div>
+          </dl>
+          <details className="permission-details"><summary>Why is approval needed?</summary><p>{approvalAction.explanation}</p></details>
           {editApproval && (
             <label className="field-stack approval-edit">
               <span>Edit the proposed action</span>
@@ -653,21 +982,44 @@ export function RunScreen({
           )}
           <div className="approval-buttons">
             <button className="secondary-button" type="button" onClick={skipAction}>Skip</button>
-            <button className="secondary-button" type="button" onClick={() => setEditApproval((value) => !value)}>Edit</button>
-            <button className="primary-button" type="button" onClick={approveAction}>Approve simulation</button>
+            <button className="secondary-button" type="button" onClick={blockCapability}>Block capability</button>
+            <button className="secondary-button" type="button" onClick={() => setEditApproval((value) => !value)}>Edit before approving</button>
+            <button className="primary-button" type="button" onClick={approveAction}>Approve once</button>
+          </div>
+        </article>
+      )}
+
+      {phase === "boundary-prevented" && violationItem && (
+        <article className="violation-panel">
+          <span className="blocked-pill">Boundary violation prevented</span>
+          <h2>{violationItem.title} was not performed.</h2>
+          <p>The agent reached a capability you set to <strong>Blocked</strong>. It stopped before access and kept the standing boundary unchanged.</p>
+          <div className="approval-buttons">
+            <button className="secondary-button" type="button" onClick={keepBlocked}>Keep blocked</button>
+            <button className="secondary-button" type="button" onClick={changeViolationBoundary}>Change boundary</button>
+            <button className="primary-button" type="button" onClick={allowViolationOnce}>Allow once</button>
           </div>
         </article>
       )}
 
       {phase === "replanning" && discovery && (
         <article className="discovery-panel">
-          <span className="status-pill">Agent discovered new context</span>
+          <span className="status-pill">Dynamic MCP re-selection</span>
           <h2>{discovery.title}</h2>
           <p>{discovery.description}</p>
-          <strong>{discovery.recommendation}</strong>
+          <dl className="approval-facts">
+            <div><dt>Requested capability</dt><dd>{discovery.action.name} · {discovery.action.action}</dd></div>
+            <div><dt>Scope</dt><dd>{discovery.action.scope}</dd></div>
+            <div><dt>Permission</dt><dd>{discovery.action.permission}</dd></div>
+            <div><dt>Duration</dt><dd>{discovery.action.duration}</dd></div>
+            <div><dt>Reason</dt><dd>{discovery.recommendation}</dd></div>
+          </dl>
+          {showDiscoveryWhy && <p className="discovery-why">{discovery.why}</p>}
           <div className="approval-buttons">
-            <button className="secondary-button" type="button" onClick={skipDiscovery}>Continue without it</button>
-            <button className="primary-button" type="button" onClick={addDiscovery}>Add to plan</button>
+            <button className="secondary-button" type="button" onClick={skipDiscovery}>Do not allow</button>
+            <button className="secondary-button" type="button" onClick={useDiscoveryAlternative}>Choose another</button>
+            <button className="secondary-button" type="button" onClick={() => setShowDiscoveryWhy((value) => !value)}>Why?</button>
+            <button className="primary-button" type="button" onClick={addDiscovery}>Allow once</button>
           </div>
         </article>
       )}
@@ -681,7 +1033,7 @@ export function RunScreen({
           {items.map((item) => (
             <div className={`execution-row ${item.status}`} key={item.id}>
               <span className="execution-icon">{statusIcon(item.status)}</span>
-              <div><strong>{item.title}</strong><p>{item.statusMessage}</p></div>
+              <div><strong>{item.title}</strong><p>{item.statusMessage}</p><span className="row-boundary">Boundary: {actionForItem(item).boundary ?? actionForItem(item).defaultBoundary}{actionForItem(item).temporary ? ` · Temporary · ${actionForItem(item).scope}` : ""}</span></div>
               <span className={`execution-status ${item.status}`}>{statusLabel(item.status)}</span>
             </div>
           ))}
@@ -725,20 +1077,14 @@ function statusLabel(status) {
 }
 
 function phaseLabel(phase) {
-  return { running: "Working", executing: "Working", waiting: "Needs approval", replanning: "Replanning", finalizing: "Preparing result", stopped: "Stopped" }[phase] ?? phase;
-}
-
-function runHeading(phase) {
-  if (phase === "waiting") return "AI needs your approval.";
-  if (phase === "replanning") return "AI found something worth reviewing.";
-  if (phase === "finalizing") return "Preparing your result.";
-  if (phase === "stopped") return "Task stopped.";
-  return "Working on your task.";
+  return { running: "Working", executing: "Working", paused: "Paused", waiting: "Needs approval", replanning: "Permission needed", "boundary-prevented": "Boundary protected", finalizing: "Preparing result", stopped: "Stopped" }[phase] ?? phase;
 }
 
 function runLead(phase) {
   if (phase === "waiting") return "The agent paused exactly where the selected control requires approval.";
-  if (phase === "replanning") return "The plan can adapt, but you decide whether the newly discovered work is added.";
+  if (phase === "replanning") return "A missing capability appeared during execution. The agent cannot expand access without you.";
+  if (phase === "boundary-prevented") return "A blocked action was not performed. You can keep the boundary, allow one use, or change it.";
+  if (phase === "paused") return "The run is paused. No new simulated step will begin until you resume it.";
   if (phase === "finalizing") return "The completed and blocked steps are being turned into a task-specific outcome.";
   if (phase === "stopped") return "No additional simulated step will run. You can change controls or start a new delegation.";
   return "Each step changes state as it runs. Sensitive actions pause before anything visible could happen.";

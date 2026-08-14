@@ -1,6 +1,11 @@
 import { useMemo, useState } from "react";
 import { generateAgentPlan, reviseAgentPlan } from "./agent/planner";
-import { derivePlanActions } from "./agent/toolRegistry";
+import {
+  applyAutonomyPreset,
+  deriveMcpSelection,
+  derivePlanActions,
+  getToolAction,
+} from "./agent/toolRegistry";
 import AgentCompanion from "./components/AgentCompanion";
 import {
   BriefScreen,
@@ -38,6 +43,8 @@ export default function App() {
   const [activeExample, setActiveExample] = useState(null);
   const [runKey, setRunKey] = useState(0);
   const [stopToken, setStopToken] = useState(0);
+  const [pauseToken, setPauseToken] = useState(0);
+  const [autonomyPreset, setAutonomyPreset] = useState("balanced");
   const [agentStatus, setAgentStatus] = useState({
     state: "idle",
     message: stepStatusCopy.context,
@@ -102,7 +109,8 @@ export default function App() {
 
       setClarification(null);
       setPlan(nextPlan);
-      setActions(derivePlanActions(nextPlan));
+      setAutonomyPreset("balanced");
+      setActions(applyAutonomyPreset(derivePlanActions(nextPlan), "balanced"));
       setCurrentStep("brief");
       setAgentStatus({ state: "idle", message: stepStatusCopy.brief });
       setAgentNote(`I created a ${nextPlan.steps.length}-step plan. Nothing has run yet.`);
@@ -119,7 +127,7 @@ export default function App() {
       const nextPlan = await generateAgentPlan(goal, { regenerate: true });
       if (!nextPlan.needsClarification) {
         setPlan(nextPlan);
-        setActions(derivePlanActions(nextPlan));
+        setActions(applyAutonomyPreset(derivePlanActions(nextPlan), autonomyPreset));
         setAgentNote("The workflow has been regenerated for your review.");
       }
     } finally {
@@ -135,7 +143,7 @@ export default function App() {
     try {
       const nextPlan = await reviseAgentPlan(plan, feedback);
       setPlan(nextPlan);
-      setActions(derivePlanActions(nextPlan));
+      setActions(applyAutonomyPreset(derivePlanActions(nextPlan), autonomyPreset));
       setAgentNote(`Revision applied: “${feedback.trim()}”`);
     } finally {
       setPlanning(false);
@@ -153,6 +161,39 @@ export default function App() {
     setAgentStatus({ state: "idle", message: stepStatusCopy.controls });
     setAgentNote("I’ve recommended a boundary for every capability in this plan.");
     goToTop();
+  }
+
+  function selectMcpSource(toolId, ambiguity) {
+    if (!ambiguity) return;
+    if (toolId === ambiguity.recommendedToolId) {
+      setPlan({
+        ...plan,
+        sourceChoiceResolved: true,
+        sourceChoiceLabel: getToolAction(toolId).name,
+      });
+      setAgentNote(`The recommendation stays with ${getToolAction(toolId).name}.`);
+      return;
+    }
+    const nextPlan = {
+      ...plan,
+      id: `plan-${Date.now()}`,
+      sourceChoiceResolved: true,
+      sourceChoiceLabel: getToolAction(toolId).name,
+      steps: plan.steps.map((step) =>
+        step.toolId === ambiguity.recommendedToolId
+          ? { ...step, toolId, title: `${step.title} using an alternative source` }
+          : step,
+      ),
+    };
+    setPlan(nextPlan);
+    setActions(applyAutonomyPreset(derivePlanActions(nextPlan), autonomyPreset));
+    setAgentNote("The source choice changed. The MCP selection and its explanation were recalculated.");
+  }
+
+  function selectPreset(presetId) {
+    setAutonomyPreset(presetId);
+    setActions((current) => applyAutonomyPreset(current, presetId));
+    setAgentNote(`The ${presetId === "high" ? "high autonomy" : presetId} preset populated every detailed boundary. You can still override any action.`);
   }
 
   function updateBoundary(actionId, boundary) {
@@ -181,6 +222,8 @@ export default function App() {
     setActiveExample(null);
     setRunKey(0);
     setStopToken(0);
+    setPauseToken(0);
+    setAutonomyPreset("balanced");
     setAgentStatus({ state: "idle", message: stepStatusCopy.context });
     setAgentNote("Give me a task and I’ll build a plan before anything runs.");
     goToTop();
@@ -201,11 +244,40 @@ export default function App() {
       }
       return;
     }
+    if (command === "pause") {
+      if (currentStep === "result") {
+        setPauseToken((value) => value + 1);
+        setAgentNote("Pause or resume requested. The agent keeps the same boundaries either way.");
+      } else {
+        setAgentNote("Nothing is running yet. You can review the plan and boundaries first.");
+      }
+      return;
+    }
+    if (command === "access") {
+      const active = actions.filter((action) => action.boundary !== "Blocked");
+      setAgentNote(active.length
+        ? active.map((action) => `${action.name}: ${action.boundary}`).join(" · ")
+        : "No capabilities currently have access.");
+      return;
+    }
+    if (command === "boundaries") {
+      setAgentNote(actions.length
+        ? actions.map((action) => `${action.action} — ${action.boundary}`).join(" · ")
+        : "Boundaries will appear after the plan is built.");
+      return;
+    }
+    if (command === "next") {
+      setAgentNote(currentStep === "result"
+        ? "The next pending execution row will run. The agent will pause before any Ask first action or new MCP permission."
+        : `Next: ${steps[Math.min(currentIndex + 1, steps.length - 1)].label}.`);
+      return;
+    }
     if (command === "why") {
+      const selection = plan ? deriveMcpSelection(plan) : null;
       setAgentNote(
-        currentStep === "controls"
-          ? "Each recommendation follows action risk: read and reasoning are usually automatic; drafts stay private; visible or shared changes require approval."
-          : "The plan uses the smallest set of capabilities that can produce a useful, reviewable outcome.",
+        selection?.selected.length
+          ? selection.selected.map((action) => `${action.name}: ${action.selectionReason}`).join(" · ")
+          : "The agent selected no external MCP for this task because the supplied context and reasoning workspace are sufficient.",
       );
       return;
     }
@@ -280,6 +352,7 @@ export default function App() {
             onBack={() => navigate("context")}
             onContinue={continueToControls}
             onPlanChange={setPlan}
+            onMcpChoice={selectMcpSource}
             onRegenerate={regeneratePlan}
             onRevise={revisePlan}
             plan={plan}
@@ -290,8 +363,10 @@ export default function App() {
         {currentStep === "controls" && plan && (
           <ControlsScreen
             actions={actions}
+            activePreset={autonomyPreset}
             onBack={() => navigate("brief")}
             onNext={startRun}
+            onPreset={selectPreset}
             onUpdate={updateBoundary}
             plan={plan}
           />
@@ -306,6 +381,7 @@ export default function App() {
             onBack={() => navigate("controls")}
             onRestart={restart}
             plan={plan}
+            pauseToken={pauseToken}
             stopToken={stopToken}
           />
         )}

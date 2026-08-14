@@ -3,7 +3,16 @@ import {
   generateFallbackPlan,
   generateFallbackResult,
 } from "../src/agent/fallbackPlanner.js";
-import { derivePlanActions } from "../src/agent/toolRegistry.js";
+import {
+  applyAutonomyPreset,
+  deriveMcpSelection,
+  derivePlanActions,
+  getToolAction,
+} from "../src/agent/toolRegistry.js";
+import {
+  completionMessage,
+  discoveryForPlan,
+} from "../src/agent/executor.js";
 
 const inputs = [
   "Prepare a UX feedback summary for Friday.",
@@ -77,4 +86,50 @@ const signatures = new Set(
 );
 assert.ok(signatures.size >= 7, "Different tasks should produce meaningfully different tools and plans");
 
-console.log(`Planner checks passed for ${inputs.length} required inputs plus a sensitive-action case.`);
+// Seven research flows: tool choice, autonomy, ambiguity, runtime permission, and blocking.
+const launchFlow = generateFallbackPlan("Decide whether our redesigned onboarding should launch next week.");
+const launchSelection = deriveMcpSelection(launchFlow);
+assert.ok(launchSelection.selected.some((action) => action.id === "figma-comments"));
+assert.ok(launchSelection.selected.some((action) => action.id === "jira-blockers"));
+assert.equal(launchSelection.confidence.level, "Medium");
+assert.ok(launchSelection.considered.length >= 1);
+
+const complaintFlow = generateFallbackPlan("Analyse these customer complaints and identify recurring themes.");
+const complaintSelection = deriveMcpSelection(complaintFlow);
+assert.equal(complaintFlow.intent, "feedback");
+assert.equal(complaintSelection.selected.length, 0, "Supplied complaints should not trigger irrelevant MCP access");
+assert.equal(complaintSelection.confidence.level, "High");
+
+const sprintFlow = generateFallbackPlan("Plan next week's sprint and identify delivery blockers.");
+assert.ok(deriveMcpSelection(sprintFlow).selected.some((action) => action.id === "jira-read"));
+assert.ok(!deriveMcpSelection(sprintFlow).selected.some((action) => action.id === "figma-comments"));
+
+const updateFlow = generateFallbackPlan("Prepare and send a project update in Teams.");
+const updateActions = derivePlanActions(updateFlow);
+assert.ok(updateActions.some((action) => action.id === "jira-read"));
+assert.ok(updateActions.some((action) => action.id === "teams-send" && action.defaultBoundary === "Ask first"));
+
+assert.ok(launchSelection.ambiguity, "Launch decisions should surface an ambiguous enterprise source choice");
+assert.notEqual(launchSelection.ambiguity.recommendedToolId, launchSelection.ambiguity.alternativeToolId);
+
+const runtimeRequest = discoveryForPlan(launchFlow, 2);
+assert.ok(runtimeRequest, "Execution should be able to request a missing MCP");
+assert.equal(runtimeRequest.action.permission, "Read-only");
+assert.match(runtimeRequest.action.scope, /#launch|project file/i);
+assert.match(runtimeRequest.action.duration, /task only/i);
+
+const balanced = applyAutonomyPreset(updateActions, "balanced");
+const conservative = applyAutonomyPreset(updateActions, "conservative");
+const high = applyAutonomyPreset(updateActions, "high");
+assert.equal(balanced.find((action) => action.id === "teams-draft")?.boundary, "Draft only");
+assert.equal(conservative.find((action) => action.id === "teams-draft")?.boundary, "Ask first");
+assert.equal(high.find((action) => action.id === "teams-send")?.boundary, "Ask first");
+
+const blockedAction = getToolAction("jira-read");
+assert.match(
+  completionMessage(sprintFlow.steps[0], blockedAction, "Blocked"),
+  /skipped.*blocked/i,
+  "A blocked capability must be recorded as not executed",
+);
+
+console.log(`Planner checks passed for ${inputs.length} general inputs and all 7 MCP trust research flows.`);

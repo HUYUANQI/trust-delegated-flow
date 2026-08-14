@@ -16,6 +16,14 @@ export const examplePrompts = [
       "Help me plan next week's sprint. Identify blockers, prioritise the highest-value work, and prepare a reviewable plan.",
   },
   {
+    id: "customer-complaints",
+    label: "Customer complaints",
+    title: "Analyse complaints",
+    description: "Find themes without opening unrelated company systems.",
+    prompt:
+      "Analyse these customer complaints, group the recurring themes, and recommend which problem we should investigate first.",
+  },
+  {
     id: "launch-decision",
     label: "Launch decision",
     title: "Make a launch decision",

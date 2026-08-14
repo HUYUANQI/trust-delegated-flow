@@ -1,4 +1,4 @@
-import { getToolAction } from "./toolRegistry";
+import { getToolAction } from "./toolRegistry.js";
 
 export function createExecutionItems(plan) {
   return plan.steps.map((step) => ({
@@ -51,23 +51,41 @@ export function discoveryForPlan(plan, completedCount) {
     return null;
   }
 
+  const needsRecentDiscussion = ["research", "product-analysis", "decision"].includes(plan.intent);
+  const toolId = needsRecentDiscussion ? "slack-read" : "drive-read";
+  const alternativeToolId = needsRecentDiscussion ? "drive-read" : "ai-analyze";
+  const action = getToolAction(toolId);
+
   return {
     id: `discovery-${Date.now()}`,
-    title: "Review an additional risk signal",
+    title: `A missing ${action.name} capability could improve this result`,
     description:
-      plan.intent === "product-analysis"
-        ? "The initial analysis suggests that accessibility or error recovery may contribute to the observed product friction."
-        : "The evidence may contain a related risk signal that was not explicit in the original plan.",
-    recommendation: "+ Add a focused review before finalising the recommendation",
+      needsRecentDiscussion
+        ? "The agent found a reference to a recent launch discussion that was not available in the original plan."
+        : "The agent found a reference to a structured workspace report that was not available in the original plan.",
+    recommendation: `Allow read-only ${action.name} access once, scoped to ${needsRecentDiscussion ? "#launch" : "the referenced project file"}.`,
+    why: "This capability was not selected initially because the reference only appeared during execution. The agent is pausing instead of expanding its own access.",
+    action: {
+      ...action,
+      scope: needsRecentDiscussion ? "#launch only" : "Referenced project file only",
+      duration: "This task only; expires when the run finishes",
+      permission: "Read-only",
+    },
+    alternative: {
+      ...getToolAction(alternativeToolId),
+      scope: alternativeToolId === "drive-read" ? "Referenced launch report only" : "Current task context only",
+      duration: "This task only",
+      permission: alternativeToolId === "drive-read" ? "Read-only" : "No external access",
+    },
     step: {
       id: `step-discovery-${Date.now()}`,
-      title: "Review the newly discovered risk signal",
+      title: needsRecentDiscussion ? "Check the referenced #launch discussion" : "Review the referenced project report",
       description:
-        "Assess whether the additional signal changes the findings or recommended next action.",
-      toolId: "ai-analyze",
+        "Use the temporary, scoped permission to check whether the new evidence changes the recommendation.",
+      toolId,
       risk: "low",
       status: "pending",
-      statusMessage: "Waiting to review the new signal.",
+      statusMessage: `Waiting for temporary ${action.name} permission.`,
     },
   };
 }

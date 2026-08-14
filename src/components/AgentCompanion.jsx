@@ -28,9 +28,12 @@ export default function AgentCompanion({ note, onCommand, status }) {
           <p className="agent-current-status">{status.message}</p>
           <p className="agent-note">{note}</p>
           <div className="agent-commands">
-            <button type="button" onClick={() => onCommand("explain")}>Explain this step</button>
+            <button type="button" onClick={() => onCommand("why")}>Why did you choose this MCP?</button>
+            <button type="button" onClick={() => onCommand("access")}>What access do you have?</button>
+            <button type="button" onClick={() => onCommand("next")}>What will happen next?</button>
+            <button type="button" onClick={() => onCommand("boundaries")}>Show my boundaries</button>
             <button type="button" onClick={() => onCommand("change-plan")}>Change the plan</button>
-            <button type="button" onClick={() => onCommand("why")}>Why did you choose this?</button>
+            <button type="button" onClick={() => onCommand("pause")}>Pause / resume agent</button>
             <button type="button" onClick={() => onCommand("stop")}>Stop task</button>
           </div>
         </div>
