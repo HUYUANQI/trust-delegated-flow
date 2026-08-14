@@ -5,3 +5,5 @@ dist/
 base44/.app.jsonc
 *.log
 .DS_Store
+agent-mobile.png
+agent-result.png
