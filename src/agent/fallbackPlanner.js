@@ -196,7 +196,14 @@ const templates = {
     steps: [
       step("Interpret the objective", "Clarify the desired outcome, constraints, and available context.", "ai-understand", "low"),
       step("Break down the task", "Turn the objective into a small set of useful work items.", "ai-structure", "low"),
-    ◊_m¢Gß≤⁄Óù∆≠y‹.trim();
+      step("Analyse the options", "Evaluate possible approaches, trade-offs, and missing information.", "ai-analyze", "low"),
+      step("Prepare the recommended outcome", "Create a useful answer or draft and identify the next action.", "ai-recommend", "low"),
+    ],
+  },
+};
+
+export function generateFallbackPlan(goal, context = {}) {
+  const cleanGoal = goal.trim();
   if (!cleanGoal) {
     return clarificationPlan(
       cleanGoal,
