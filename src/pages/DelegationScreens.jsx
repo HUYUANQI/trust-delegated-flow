@@ -1,5 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  createDeliverableArtifact,
+  downloadDeliverableArtifact,
+} from "../agent/artifacts";
+import {
   completionMessage,
   createAuditEvent,
   createExecutionItems,
@@ -505,6 +509,7 @@ export function RunScreen({
   const [blockedCrossings, setBlockedCrossings] = useState(0);
   const [temporaryGrants, setTemporaryGrants] = useState([]);
   const [showRunWhy, setShowRunWhy] = useState(false);
+  const [previewArtifact, setPreviewArtifact] = useState(false);
   const [result, setResult] = useState(null);
   const [audit, setAudit] = useState(() => [
     createAuditEvent("Goal received"),
@@ -870,14 +875,65 @@ export function RunScreen({
     const usedMcpActions = runtimeActions.filter((action) =>
       action.external && completedItems.some((item) => getToolAction(item.toolId).id === action.id),
     );
+    const artifact = createDeliverableArtifact(goal, plan, result);
     return (
       <section className="screen compact-screen result-screen">
-        <div className="done-mark">OK</div>
-        <span className="eyebrow blue">Task completed</span>
-        <h1>{result.title}</h1>
-        <p className="result-goal"><strong>Goal:</strong> {goal}</p>
-        <div className="simulation-banner">Prototype simulation · Prepared, not externally executed</div>
-        <p className="lead">{result.summary}</p>
+        <div className="delivery-hero">
+          <div className="delivery-check" aria-hidden="true">✓</div>
+          <span className="eyebrow blue">Task completed</span>
+          <h1>Your deliverable is ready.</h1>
+          <p className="lead">
+            The agent finished the approved workflow and packaged the result as a file.
+            Review it here or download a copy to keep working.
+          </p>
+          <div className="completion-status-line">
+            <span>100% complete</span>
+            <span>{completedItems.length} steps resolved</span>
+            <span>Prototype output</span>
+          </div>
+        </div>
+
+        <article className="surface deliverable-card">
+          <div className="file-tile" aria-hidden="true">
+            <span>{artifact.extension}</span>
+            <i />
+          </div>
+          <div className="deliverable-copy">
+            <div className="file-status"><span className="status-dot" />{artifact.status}</div>
+            <h2>{artifact.filename}</h2>
+            <strong>{artifact.label}</strong>
+            <p>{artifact.description}</p>
+            <div className="file-meta">
+              <span>{artifact.format}</span>
+              <span>{artifact.size}</span>
+              <span>Prepared at {artifact.createdLabel}</span>
+            </div>
+          </div>
+          <div className="deliverable-actions">
+            <button
+              className="secondary-button"
+              type="button"
+              onClick={() => setPreviewArtifact((value) => !value)}
+              aria-expanded={previewArtifact}
+            >
+              {previewArtifact ? "Close preview" : "Preview file"}
+            </button>
+            <button
+              className="primary-button"
+              type="button"
+              onClick={() => downloadDeliverableArtifact(artifact)}
+            >
+              Download file
+            </button>
+          </div>
+        </article>
+
+        <p className="result-goal delivery-goal"><strong>Completed task:</strong> {goal}</p>
+        <div className="simulation-banner">Prototype simulation · The file is real, but no external MCP action was performed</div>
+
+        {previewArtifact && (
+          <ArtifactPreview artifact={artifact} goal={goal} result={result} />
+        )}
 
         <article className="surface trust-summary">
           <div className="surface-heading">
@@ -906,29 +962,18 @@ export function RunScreen({
           )}
         </article>
 
-        <div className="dynamic-result-stack">
-          {result.sections.map((section) => (
-            <article className="surface result-section" key={section.title}>
-              <div className="surface-heading">
-                <div>
-                  <span className="section-label">Prepared result</span>
-                  <h2>{section.title}</h2>
-                </div>
-              </div>
-              {section.body && <p className="result-body">{section.body}</p>}
-              {section.items && <ul>{section.items.map((item) => <li key={item}>{item}</li>)}</ul>}
-            </article>
-          ))}
-        </div>
-
         <article className="next-step-card">
           <span className="section-label">Recommended next step</span>
           <p>{result.nextStep}</p>
         </article>
-        <AuditTrail records={audit} />
+        <details className="audit-disclosure">
+          <summary>View execution record</summary>
+          <AuditTrail records={audit} />
+        </details>
         <div className="final-actions">
           <button className="secondary-button" type="button" onClick={onRestart}>New delegation</button>
-          <button className="primary-button" type="button" onClick={() => window.print()}>Review / save result</button>
+          <button className="secondary-button" type="button" onClick={() => window.print()}>Save page as PDF</button>
+          <button className="primary-button" type="button" onClick={() => downloadDeliverableArtifact(artifact)}>Download deliverable</button>
         </div>
       </section>
     );
@@ -1043,6 +1088,38 @@ export function RunScreen({
       <AuditTrail records={audit} />
       <button className="text-button result-back" type="button" onClick={onBack}>Change controls</button>
     </section>
+  );
+}
+
+function ArtifactPreview({ artifact, goal, result }) {
+  return (
+    <article className="surface artifact-preview" aria-label={`${artifact.filename} preview`}>
+      <div className="preview-toolbar">
+        <div><span className="file-mini-mark">{artifact.extension}</span><strong>File preview</strong></div>
+        <span>Read-only preview</span>
+      </div>
+      <div className="document-sheet">
+        <span className="document-kicker">Prepared deliverable</span>
+        <h2>{result.title}</h2>
+        <dl className="document-meta">
+          <div><dt>Status</dt><dd>Complete</dd></div>
+          <div><dt>Task</dt><dd>{goal}</dd></div>
+        </dl>
+        <p className="document-summary">{result.summary}</p>
+        {result.sections.map((section) => (
+          <section className="document-section" key={section.title}>
+            <h3>{section.title}</h3>
+            {section.body && <p className="result-body">{section.body}</p>}
+            {section.items && <ul>{section.items.map((item) => <li key={item}>{item}</li>)}</ul>}
+          </section>
+        ))}
+        <section className="document-section next">
+          <h3>Recommended next step</h3>
+          <p>{result.nextStep}</p>
+        </section>
+        <footer>Prepared in the Delegate prototype · Review facts before external use</footer>
+      </div>
+    </article>
   );
 }
 

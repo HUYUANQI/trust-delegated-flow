@@ -13,6 +13,7 @@ import {
   completionMessage,
   discoveryForPlan,
 } from "../src/agent/executor.js";
+import { createDeliverableArtifact } from "../src/agent/artifacts.js";
 
 const inputs = [
   "Prepare a UX feedback summary for Friday.",
@@ -131,5 +132,16 @@ assert.match(
   /skipped.*blocked/i,
   "A blocked capability must be recorded as not executed",
 );
+
+const meetingFlow = generateFallbackPlan("Organise my meeting notes into decisions and action items.");
+const meetingResult = generateFallbackResult(meetingFlow.originalGoal, meetingFlow, {
+  items: meetingFlow.steps.map((step) => ({ ...step, status: "completed" })),
+});
+const meetingArtifact = createDeliverableArtifact(meetingFlow.originalGoal, meetingFlow, meetingResult);
+assert.equal(meetingArtifact.filename, "meeting-notes.md");
+assert.equal(meetingArtifact.status, "Ready to review");
+assert.match(meetingArtifact.content, /# Meeting summary — prepared outcome/);
+assert.match(meetingArtifact.content, /## Recommended next step/);
+assert.match(meetingArtifact.content, /\*\*Status:\*\* Complete/);
 
 console.log(`Planner checks passed for ${inputs.length} general inputs and all 7 MCP trust research flows.`);
